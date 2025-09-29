@@ -10,10 +10,19 @@ import { commonStyles, colors } from '@/styles/commonStyles';
 
 type Player = 'X' | 'O' | null;
 type GameMode = 'computer' | 'human';
+type Difficulty = 'easy' | 'medium' | 'hard';
 
 export default function Game() {
-  const { mode } = useLocalSearchParams<{ mode: string }>();
+  const { mode, player, difficulty } = useLocalSearchParams<{ 
+    mode: string; 
+    player: string; 
+    difficulty?: string; 
+  }>();
+  
   const gameMode = mode as GameMode;
+  const playerSymbol = player as 'X' | 'O';
+  const computerSymbol = playerSymbol === 'X' ? 'O' : 'X';
+  const gameDifficulty = difficulty as Difficulty;
   
   const [board, setBoard] = useState<Player[]>(Array(9).fill(null));
   const [currentPlayer, setCurrentPlayer] = useState<'X' | 'O'>('X');
@@ -22,7 +31,15 @@ export default function Game() {
   const [isGameActive, setIsGameActive] = useState(true);
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
 
-  console.log('Game started with mode:', gameMode);
+  console.log('Game started with mode:', gameMode, 'player:', playerSymbol, 'difficulty:', gameDifficulty);
+
+  // Start computer move if computer goes first
+  useEffect(() => {
+    if (gameMode === 'computer' && playerSymbol === 'O' && isGameActive && board.every(cell => cell === null)) {
+      console.log('Computer goes first');
+      makeComputerMove(board);
+    }
+  }, []);
 
   const checkWinner = (boardState: Player[]): { winner: Player; line: number[] | null } => {
     const winningCombinations = [
@@ -45,13 +62,21 @@ export default function Game() {
     return boardState.every(cell => cell !== null) && !checkWinner(boardState).winner;
   };
 
+  const getRandomMove = (boardState: Player[]): number => {
+    const availableMoves = boardState
+      .map((cell, index) => cell === null ? index : null)
+      .filter(index => index !== null) as number[];
+    
+    return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+  };
+
   const getBestMove = (boardState: Player[]): number => {
     // Check if computer can win
     for (let i = 0; i < 9; i++) {
       if (boardState[i] === null) {
         const testBoard = [...boardState];
-        testBoard[i] = 'O';
-        if (checkWinner(testBoard).winner === 'O') {
+        testBoard[i] = computerSymbol;
+        if (checkWinner(testBoard).winner === computerSymbol) {
           return i;
         }
       }
@@ -61,8 +86,8 @@ export default function Game() {
     for (let i = 0; i < 9; i++) {
       if (boardState[i] === null) {
         const testBoard = [...boardState];
-        testBoard[i] = 'X';
-        if (checkWinner(testBoard).winner === 'X') {
+        testBoard[i] = playerSymbol;
+        if (checkWinner(testBoard).winner === playerSymbol) {
           return i;
         }
       }
@@ -81,26 +106,57 @@ export default function Game() {
     }
 
     // Take any available move
+    return getRandomMove(boardState);
+  };
+
+  const getComputerMove = (boardState: Player[]): number => {
     const availableMoves = boardState
       .map((cell, index) => cell === null ? index : null)
       .filter(index => index !== null) as number[];
-    
-    return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+
+    if (availableMoves.length === 0) return -1;
+
+    switch (gameDifficulty) {
+      case 'easy':
+        // 70% random moves, 30% strategic moves
+        if (Math.random() < 0.7) {
+          console.log('Easy AI: Making random move');
+          return getRandomMove(boardState);
+        } else {
+          console.log('Easy AI: Making strategic move');
+          return getBestMove(boardState);
+        }
+
+      case 'medium':
+        // 40% random moves, 60% strategic moves
+        if (Math.random() < 0.4) {
+          console.log('Medium AI: Making random move');
+          return getRandomMove(boardState);
+        } else {
+          console.log('Medium AI: Making strategic move');
+          return getBestMove(boardState);
+        }
+
+      case 'hard':
+        // Always make the best move
+        console.log('Hard AI: Making optimal move');
+        return getBestMove(boardState);
+
+      default:
+        // Default to medium difficulty
+        return getBestMove(boardState);
+    }
   };
 
   const makeComputerMove = (boardState: Player[]) => {
-    console.log('Computer is making a move');
-    const availableMoves = boardState
-      .map((cell, index) => cell === null ? index : null)
-      .filter(index => index !== null) as number[];
-
-    if (availableMoves.length === 0) return;
-
-    const computerMove = getBestMove(boardState);
+    console.log('Computer is making a move with difficulty:', gameDifficulty);
+    
+    const computerMove = getComputerMove(boardState);
+    if (computerMove === -1) return;
 
     setTimeout(() => {
       const newBoard = [...boardState];
-      newBoard[computerMove] = 'O';
+      newBoard[computerMove] = computerSymbol;
       setBoard(newBoard);
 
       const { winner: gameWinner, line } = checkWinner(newBoard);
@@ -111,7 +167,11 @@ export default function Game() {
         setWinningLine(line);
         setIsGameActive(false);
         // Haptic feedback for computer win
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Haptics.notificationAsync(
+          gameWinner === playerSymbol 
+            ? Haptics.NotificationFeedbackType.Success 
+            : Haptics.NotificationFeedbackType.Error
+        );
         console.log('Game won by:', gameWinner);
       } else if (gameDraw) {
         setIsDraw(true);
@@ -120,7 +180,7 @@ export default function Game() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         console.log('Game is a draw');
       } else {
-        setCurrentPlayer('X');
+        setCurrentPlayer(playerSymbol);
       }
     }, 800); // Small delay for better UX
   };
@@ -128,6 +188,12 @@ export default function Game() {
   const handleCellPress = (index: number) => {
     if (!isGameActive || board[index] !== null) {
       console.log('Invalid move attempted at index:', index);
+      return;
+    }
+
+    // Only allow player moves when it's their turn
+    if (gameMode === 'computer' && currentPlayer !== playerSymbol) {
+      console.log('Not player turn');
       return;
     }
 
@@ -147,7 +213,11 @@ export default function Game() {
       setWinningLine(line);
       setIsGameActive(false);
       // Haptic feedback for win
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Haptics.notificationAsync(
+        gameWinner === playerSymbol 
+          ? Haptics.NotificationFeedbackType.Success 
+          : Haptics.NotificationFeedbackType.Error
+      );
       console.log('Game won by:', gameWinner);
     } else if (gameDraw) {
       setIsDraw(true);
@@ -156,8 +226,8 @@ export default function Game() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       console.log('Game is a draw');
     } else {
-      if (gameMode === 'computer' && currentPlayer === 'X') {
-        setCurrentPlayer('O');
+      if (gameMode === 'computer') {
+        setCurrentPlayer(computerSymbol);
         makeComputerMove(newBoard);
       } else {
         setCurrentPlayer(currentPlayer === 'X' ? 'O' : 'X');
@@ -173,17 +243,24 @@ export default function Game() {
     setWinningLine(null);
     setIsDraw(false);
     setIsGameActive(true);
+
+    // If computer goes first, make computer move
+    if (gameMode === 'computer' && playerSymbol === 'O') {
+      setTimeout(() => {
+        makeComputerMove(Array(9).fill(null));
+      }, 500);
+    }
   };
 
   const handleBack = () => {
-    console.log('Going back to mode selection');
+    console.log('Going back to previous screen');
     router.back();
   };
 
   const getGameStatus = () => {
     if (winner) {
       if (gameMode === 'computer') {
-        return winner === 'X' ? 'You Win! 🎉' : 'Computer Wins! 🤖';
+        return winner === playerSymbol ? 'You Win! 🎉' : 'Computer Wins! 🤖';
       } else {
         return `Player ${winner} Wins! 🎉`;
       }
@@ -192,10 +269,22 @@ export default function Game() {
       return "It's a Draw! 🤝";
     }
     if (gameMode === 'computer') {
-      return currentPlayer === 'X' ? 'Your Turn' : 'Computer\'s Turn';
+      return currentPlayer === playerSymbol ? 'Your Turn' : 'Computer\'s Turn';
     } else {
       return `Player ${currentPlayer}'s Turn`;
     }
+  };
+
+  const getDifficultyDisplay = () => {
+    if (gameMode !== 'computer' || !gameDifficulty) return '';
+    
+    const difficultyEmojis = {
+      easy: '😊',
+      medium: '🤔',
+      hard: '🔥'
+    };
+    
+    return ` ${difficultyEmojis[gameDifficulty]} ${gameDifficulty.charAt(0).toUpperCase() + gameDifficulty.slice(1)}`;
   };
 
   return (
@@ -205,7 +294,9 @@ export default function Game() {
     >
       <Stack.Screen
         options={{
-          title: gameMode === 'computer' ? 'vs Computer' : 'vs Human',
+          title: gameMode === 'computer' 
+            ? `vs Computer${getDifficultyDisplay()}` 
+            : 'vs Human',
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
           headerTitleStyle: { color: colors.text },
@@ -218,12 +309,17 @@ export default function Game() {
           
           <View style={styles.statusContainer}>
             <Text style={styles.statusText}>{getGameStatus()}</Text>
+            {gameMode === 'computer' && gameDifficulty && (
+              <Text style={styles.difficultyText}>
+                Difficulty: {gameDifficulty.charAt(0).toUpperCase() + gameDifficulty.slice(1)}
+              </Text>
+            )}
           </View>
 
           <TicTacToeBoard
             board={board}
             onCellPress={handleCellPress}
-            disabled={!isGameActive || (gameMode === 'computer' && currentPlayer === 'O')}
+            disabled={!isGameActive || (gameMode === 'computer' && currentPlayer === computerSymbol)}
             winningLine={winningLine}
           />
 
@@ -256,12 +352,20 @@ const styles = StyleSheet.create({
   statusContainer: {
     marginBottom: 30,
     paddingHorizontal: 20,
+    alignItems: 'center',
   },
   statusText: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
     textAlign: 'center',
+  },
+  difficultyText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.grey,
+    textAlign: 'center',
+    marginTop: 4,
   },
   buttonContainer: {
     width: '100%',

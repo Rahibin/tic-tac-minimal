@@ -10,10 +10,10 @@ import * as Haptics from 'expo-haptics';
 type Player = 'X' | 'O';
 
 export default function PlayerSelection() {
-  const { mode } = useLocalSearchParams<{ mode: string }>();
+  const { mode, difficulty } = useLocalSearchParams<{ mode: string; difficulty?: string }>();
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
-  console.log('Player selection screen with mode:', mode);
+  console.log('Player selection screen with mode:', mode, 'difficulty:', difficulty);
 
   const handlePlayerSelect = (player: Player) => {
     console.log('Player selected:', player);
@@ -27,14 +27,31 @@ export default function PlayerSelection() {
       return;
     }
     
-    console.log('Starting game with player:', selectedPlayer, 'mode:', mode);
+    console.log('Starting game with player:', selectedPlayer, 'mode:', mode, 'difficulty:', difficulty);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push(`/game?mode=${mode}&player=${selectedPlayer}`);
+    
+    const gameParams = `mode=${mode}&player=${selectedPlayer}${difficulty ? `&difficulty=${difficulty}` : ''}`;
+    router.push(`/game?${gameParams}`);
   };
 
   const handleBack = () => {
-    console.log('Going back to mode selection');
+    console.log('Going back to previous screen');
     router.back();
+  };
+
+  const getDifficultyDisplay = () => {
+    if (!difficulty) return '';
+    
+    switch (difficulty) {
+      case 'easy':
+        return ' (Easy Mode)';
+      case 'medium':
+        return ' (Medium Mode)';
+      case 'hard':
+        return ' (Hard Mode)';
+      default:
+        return '';
+    }
   };
 
   return (
@@ -55,7 +72,10 @@ export default function PlayerSelection() {
         <View style={commonStyles.content}>
           <Text style={commonStyles.title}>Choose Your Symbol</Text>
           <Text style={[commonStyles.text, { marginBottom: 40 }]}>
-            {mode === 'computer' ? 'Pick X or O to play against the computer' : 'Player 1, choose your symbol'}
+            {mode === 'computer' 
+              ? `Pick X or O to play against the computer${getDifficultyDisplay()}` 
+              : 'Player 1, choose your symbol'
+            }
           </Text>
 
           <View style={styles.selectionContainer}>

@@ -8,8 +8,8 @@ import { commonStyles, colors } from '@/styles/commonStyles';
 
 export default function ModeSelection() {
   const handleVsComputer = () => {
-    console.log('Starting vs Computer mode');
-    router.push('/player-selection?mode=computer');
+    console.log('Starting vs Computer mode - navigating to difficulty selection');
+    router.push('/difficulty-selection');
   };
 
   const handleVsHuman = () => {
@@ -47,7 +47,7 @@ export default function ModeSelection() {
             <View style={styles.modeCard}>
               <Text style={styles.modeTitle}>🤖 vs Computer</Text>
               <Text style={styles.modeDescription}>
-                Challenge our AI opponent
+                Challenge our AI opponent with different difficulty levels
               </Text>
               <Button
                 onPress={handleVsComputer}
