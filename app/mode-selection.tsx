@@ -9,12 +9,12 @@ import { commonStyles, colors } from '@/styles/commonStyles';
 export default function ModeSelection() {
   const handleVsComputer = () => {
     console.log('Starting vs Computer mode');
-    router.push('/game?mode=computer');
+    router.push('/player-selection?mode=computer');
   };
 
   const handleVsHuman = () => {
     console.log('Starting vs Human mode');
-    router.push('/game?mode=human');
+    router.push('/player-selection?mode=human');
   };
 
   const handleBack = () => {
