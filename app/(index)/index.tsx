@@ -15,29 +15,39 @@ export default function HomeScreen() {
 
   const modalDemos = [
     {
+      title: "Tic Tac Toe",
+      description: "Play the classic game with minimalist design",
+      route: "/mode-selection",
+      color: "#FF6B6B",
+      icon: "grid.circle",
+    },
+    {
       title: "Standard Modal",
       description: "Full screen modal presentation",
       route: "/modal",
       color: "#007AFF",
+      icon: "square.grid.3x3",
     },
     {
       title: "Form Sheet",
       description: "Bottom sheet with detents and grabber",
       route: "/formsheet",
       color: "#34C759",
+      icon: "square.grid.3x3",
     },
     {
       title: "Transparent Modal",
       description: "Overlay without obscuring background",
       route: "/transparent-modal",
       color: "#FF9500",
+      icon: "square.grid.3x3",
     }
   ];
 
   const renderModalDemo = ({ item }: { item: typeof modalDemos[0] }) => (
     <View style={styles.demoCard}>
       <View style={[styles.demoIcon, { backgroundColor: item.color }]}>
-        <IconSymbol name="square.grid.3x3" color="white" size={24} />
+        <IconSymbol name={item.icon as any} color="white" size={24} />
       </View>
       <View style={styles.demoContent}>
         <Text style={styles.demoTitle}>{item.title}</Text>
@@ -48,7 +58,7 @@ export default function HomeScreen() {
         size="sm"
         onPress={() => router.push(item.route as any)}
       >
-        Try It
+        {item.title === "Tic Tac Toe" ? "Play" : "Try It"}
       </Button>
     </View>
   );
@@ -89,7 +99,7 @@ export default function HomeScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Building the app...",
+          title: "Natively Apps",
           headerRight: renderHeaderRight,
           headerLeft: renderHeaderLeft,
         }}
