@@ -21,6 +21,72 @@ interface TicTacToeBoardProps {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+interface CellProps {
+  value: Player;
+  index: number;
+  onPress: (index: number) => void;
+  disabled: boolean;
+  isWinningCell: boolean;
+}
+
+const Cell: React.FC<CellProps> = ({ value, index, onPress, disabled, isWinningCell }) => {
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(value ? 1 : 0);
+
+  React.useEffect(() => {
+    if (value) {
+      opacity.value = withSpring(1, { damping: 15, stiffness: 150 });
+      scale.value = withSequence(
+        withSpring(1.2, { damping: 15, stiffness: 150 }),
+        withSpring(1, { damping: 15, stiffness: 150 })
+      );
+    }
+  }, [value, opacity, scale]);
+
+  const animatedTextStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  const animatedCellStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: withSpring(disabled ? 0.95 : 1) }],
+    backgroundColor: isWinningCell 
+      ? withSpring(colors.accent + '40')
+      : withSpring(colors.background),
+  }));
+
+  const handlePress = () => {
+    if (!disabled && !value) {
+      scale.value = withSequence(
+        withTiming(0.9, { duration: 100 }),
+        withSpring(1, { damping: 15, stiffness: 150 })
+      );
+      onPress(index);
+    }
+  };
+  
+  return (
+    <AnimatedPressable
+      style={[
+        styles.cell,
+        disabled && styles.cellDisabled,
+        animatedCellStyle,
+      ]}
+      onPress={handlePress}
+      disabled={disabled || value !== null}
+    >
+      <Animated.Text style={[
+        styles.cellText,
+        value === 'X' && styles.xText,
+        value === 'O' && styles.oText,
+        animatedTextStyle,
+      ]}>
+        {value || ''}
+      </Animated.Text>
+    </AnimatedPressable>
+  );
+};
+
 export const TicTacToeBoard: React.FC<TicTacToeBoardProps> = ({
   board,
   onCellPress,
@@ -29,63 +95,17 @@ export const TicTacToeBoard: React.FC<TicTacToeBoardProps> = ({
 }) => {
   const renderCell = (index: number) => {
     const value = board[index];
-    const scale = useSharedValue(1);
-    const opacity = useSharedValue(value ? 1 : 0);
-
-    React.useEffect(() => {
-      if (value) {
-        opacity.value = withSpring(1, { damping: 15, stiffness: 150 });
-        scale.value = withSequence(
-          withSpring(1.2, { damping: 15, stiffness: 150 }),
-          withSpring(1, { damping: 15, stiffness: 150 })
-        );
-      }
-    }, [value]);
-
-    const animatedTextStyle = useAnimatedStyle(() => ({
-      transform: [{ scale: scale.value }],
-      opacity: opacity.value,
-    }));
-
-    const isWinningCell = winningLine?.includes(index);
-    
-    const animatedCellStyle = useAnimatedStyle(() => ({
-      transform: [{ scale: withSpring(disabled ? 0.95 : 1) }],
-      backgroundColor: isWinningCell 
-        ? withSpring(colors.accent + '40')
-        : withSpring(colors.background),
-    }));
-
-    const handlePress = () => {
-      if (!disabled && !value) {
-        scale.value = withSequence(
-          withTiming(0.9, { duration: 100 }),
-          withSpring(1, { damping: 15, stiffness: 150 })
-        );
-        onCellPress(index);
-      }
-    };
+    const isWinningCell = winningLine?.includes(index) || false;
     
     return (
-      <AnimatedPressable
+      <Cell
         key={index}
-        style={[
-          styles.cell,
-          disabled && styles.cellDisabled,
-          animatedCellStyle,
-        ]}
-        onPress={handlePress}
-        disabled={disabled || value !== null}
-      >
-        <Animated.Text style={[
-          styles.cellText,
-          value === 'X' && styles.xText,
-          value === 'O' && styles.oText,
-          animatedTextStyle,
-        ]}>
-          {value || ''}
-        </Animated.Text>
-      </AnimatedPressable>
+        value={value}
+        index={index}
+        onPress={onCellPress}
+        disabled={disabled}
+        isWinningCell={isWinningCell}
+      />
     );
   };
 
